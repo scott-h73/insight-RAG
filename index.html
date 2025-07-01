@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WSE Insight • Wave Swell Technical Assistant</title>
+
+  <!-- Shared styles from landing page -->
+  <link rel="stylesheet" href="https://wse-portal-blynk2016.replit.app/shared-styles.css">
+
+  <!-- Additional styles for chat interface -->
+  <style>
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .chat-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid rgba(64, 64, 64, 0.3);
+      background: rgba(23, 23, 23, 0.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 1rem 1.5rem;
+      border-radius: 1rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: rgba(20, 184, 166, 0.2);
+      border: 1px solid rgba(45, 212, 191, 0.3);
+      color: var(--color-teal-300);
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background: rgba(23, 23, 23, 0.6);
+      border: 1px solid rgba(64, 64, 64, 0.4);
+      color: var(--color-neutral-100);
+    }
+
+    .message-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .chat-input-container {
+      padding: 1rem 2rem 2rem;
+      background: rgba(23, 23, 23, 0.8);
+      border-top: 1px solid rgba(64, 64, 64, 0.3);
+      backdrop-filter: blur(12px);
+    }
+
+    .chat-input-form {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+    }
+
+    .chat-textarea {
+      flex: 1;
+      min-height: 2.5rem;
+      max-height: 8rem;
+      resize: vertical;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .send-button {
+      padding: 0.75rem 1.5rem;
+      background: rgba(20, 184, 166, 0.2);
+      border: 1px solid rgba(45, 212, 191, 0.3);
+      color: var(--color-teal-300);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+      backdrop-filter: blur(8px);
+    }
+
+    .send-button:hover {
+      background: rgba(20, 184, 166, 0.3);
+      color: var(--color-teal-200);
+    }
+
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .loading-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--color-neutral-500);
+      font-style: italic;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .typing-dots span {
+      width: 0.5rem;
+      height: 0.5rem;
+      background: var(--color-teal-400);
+      border-radius: 50%;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+      0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .welcome-message {
+      text-align: center;
+      padding: 2rem;
+      color: var(--color-neutral-300);
+    }
+
+    .welcome-message h2 {
+      margin-bottom: 1rem;
+    }
+
+    .error-message {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Background wash -->
+  <div class="bg-wash"></div>
+
+  <!-- PIN Section -->
+  <div id="pin-section" class="container" style="padding-top: 4rem;">
+    <div class="card" style="max-width: 400px; margin: 0 auto; text-align: center;">
+      <h2 class="gradient-text" style="margin-bottom: 1rem;">WSE Insight Access</h2>
+      <p style="margin-bottom: 1.5rem; color: var(--color-neutral-300);">Enter access code to continue</p>
+      <input type="password" id="pinInput" class="input" placeholder="Enter PIN" style="margin-bottom: 1rem;" onkeydown="if(event.key==='Enter') checkPIN()">
+      <button onclick="checkPIN()" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">Access Chat</button>
+      <p id="pinMessage" class="error" style="margin-top: 0.5rem; min-height: 1.5rem;"></p>
+    </div>
+  </div>
+
+  <!-- Chat Section -->
+  <div class="chat-container" id="chat-section" style="display: none;">
+    <!-- Header -->
+    <div class="chat-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div class="nav-title">WSE Insight</div>
+          <p class="text-sm text-neutral-300 mt-1">Fast answers from within your knowledge network</p>
+        </div>
+        <a href="https://wse-portal-blynk2016.replit.app/" class="nav-link" style="font-size: 0.9rem;">
+          ← Back to Portal
+        </a>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chatMessages">
+      <div class="welcome-message">
+        <h2 class="gradient-text">Welcome to WSE Insight</h2>
+        <p>Ask me anything about the Wave Swell Energy technology</p>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input-container">
+      <form class="chat-input-form" onsubmit="sendMessage(event)">
+        <textarea 
+          class="input chat-textarea" 
+          id="messageInput" 
+          placeholder="Ask about wave energy, technical specs, calculations..." 
+          rows="1"
+          onkeydown="handleKeyDown(event)"
+        ></textarea>
+        <button type="submit" class="send-button" id="sendButton">
+          Send
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const correctPIN = "2025";
+    let isLoading = false;
+    let apiKey = null;
+
+    // Configuration - using local FastAPI server
+    const API_BASE_URL = window.location.origin; // Use same origin as the frontend
+    const API_ENDPOINTS = {
+      chat: `${API_BASE_URL}/chat`,
+      health: `${API_BASE_URL}/health`
+    };
+
+    function cleanFormatting(text) {
+      // Remove reference document symbols and clean up references
+      text = text.replace(/📄/g, '');
+      text = text.replace(/🔗/g, '');
+
+      // Format reference documents - make them bold and numbered
+      let refCount = 1;
+      text = text.replace(/Reference Documents?:?/gi, '**Reference Documents:**');
+      text = text.replace(/- (.*?)(?=\n|$)/g, (match, content) => {
+        if (content.trim() && (match.includes('.pdf') || match.includes('.doc') || match.includes('document') || match.includes('manual'))) {
+          return `${refCount++}. **${content.trim()}**`;
+        }
+        return match;
+      });
+
+      // Clean up excessive ** formatting but preserve Reference Documents and numbered items
+      text = text.replace(/\*\*Reference Documents:\*\*/g, '<strong>Reference Documents:</strong>');
+      text = text.replace(/\d+\.\s\*\*(.*?)\*\*/g, '$1');
+      text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+      text = text.replace(/<strong>Reference Documents:<\/strong>/g, '**Reference Documents:**');
+
+      return text;
+    }
+
+    function checkPIN() {
+      const userPIN = document.getElementById("pinInput").value;
+      const pinMessage = document.getElementById("pinMessage");
+
+      if (userPIN === correctPIN) {
+        // Set API key for this session (different keys for different access levels)
+        apiKey = "wse-demo-key-2025"; // Default demo key
+
+        // Store in session storage for page refresh persistence
+        sessionStorage.setItem('wse-api-key', apiKey);
+        sessionStorage.setItem('wse-auth-time', Date.now().toString());
+
+        // Show chat interface
+        document.getElementById("pin-section").style.display = "none";
+        document.getElementById("chat-section").style.display = "flex";
+
+        // Optional: Test API connection
+        testAPIConnection();
+      } else {
+        pinMessage.textContent = "Incorrect PIN. Please try again.";
+        document.getElementById("pinInput").value = "";
+      }
+    }
+
+    async function testAPIConnection() {
+      try {
+        const response = await fetch(API_ENDPOINTS.health);
+        if (!response.ok) {
+          console.warn("API health check failed");
+        }
+      } catch (error) {
+        console.warn("Could not connect to API:", error);
+        // Add a subtle warning to the UI if needed
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage(event);
+      }
+    }
+
+    function addMessage(content, sender) {
+      const chatContainer = document.getElementById("chatMessages");
+      const welcomeMessage = chatContainer.querySelector('.welcome-message');
+
+      // Remove welcome message if it exists
+      if (welcomeMessage) {
+        welcomeMessage.remove();
+      }
+
+      const div = document.createElement("div");
+      div.className = `message ${sender}`;
+
+      if (sender === "user") {
+        div.innerHTML = `<div class="message-label">You</div>${content}`;
+      } else {
+        div.innerHTML = `<div class="message-label">Assistant</div>${content}`;
+      }
+
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function addErrorMessage(errorText) {
+      const chatContainer = document.getElementById("chatMessages");
+      const div = document.createElement("div");
+      div.className = "error-message";
+      div.innerHTML = `<strong>Error:</strong> ${errorText}`;
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function sendMessage(event) {
+      if (event) event.preventDefault();
+
+      const input = document.getElementById('messageInput');
+      const message = input.value.trim();
+
+      if (!message || isLoading) return;
+
+      // Check if we have an API key
+      if (!apiKey) {
+        apiKey = sessionStorage.getItem('wse-api-key');
+        if (!apiKey) {
+          addErrorMessage("Authentication required. Please refresh the page and enter your PIN again.");
+          return;
+        }
+      }
+
+      // Add user message
+      addMessage(message, 'user');
+      input.value = '';
+
+      // Show loading
+      showLoading();
+
+      try {
+        const response = await fetch(API_ENDPOINTS.chat, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            message: message
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        // Format the response
+        let answer = result.answer || "No answer received";
+
+        // Add sources if available
+        if (result.sources && result.sources.length > 0) {
+          answer += "\n\n**Reference Documents:**\n";
+          result.sources.forEach((source, index) => {
+            answer += `${index + 1}. ${source}\n`;
+          });
+        }
+
+        // Clean up formatting
+        answer = cleanFormatting(answer);
+
+        hideLoading();
+        addMessage(answer, "assistant");
+
+      } catch (error) {
+        hideLoading();
+        console.error("API Error:", error);
+
+        if (error.message.includes("401") || error.message.includes("Invalid API key")) {
+          addErrorMessage("Authentication failed. Please refresh the page and try again.");
+          // Clear stored auth
+          sessionStorage.removeItem('wse-api-key');
+          apiKey = null;
+        } else if (error.message.includes("429")) {
+          addErrorMessage("Rate limit exceeded. Please wait a moment before trying again.");
+        } else if (error.message.includes("503")) {
+          addErrorMessage("Service temporarily unavailable. Please try again in a moment.");
+        } else {
+          addErrorMessage(`Failed to get response: ${error.message}`);
+        }
+      }
+    }
+
+    function showLoading() {
+      isLoading = true;
+      const messagesContainer = document.getElementById('chatMessages');
+      const sendButton = document.getElementById('sendButton');
+
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'message assistant loading-indicator';
+      loadingDiv.id = 'loadingIndicator';
+      loadingDiv.innerHTML = `
+        <span>Thinking</span>
+        <div class="typing-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      `;
+
+      messagesContainer.appendChild(loadingDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+      sendButton.disabled = true;
+    }
+
+    function hideLoading() {
+      isLoading = false;
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const sendButton = document.getElementById('sendButton');
+
+      if (loadingIndicator) {
+        loadingIndicator.remove();
+      }
+
+      sendButton.disabled = false;
+    }
+
+    // Auto-resize textarea
+    document.getElementById('messageInput').addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 128) + 'px';
+    });
+
+    // Check for existing session on page load
+    window.addEventListener('load', function() {
+      const storedKey = sessionStorage.getItem('wse-api-key');
+      const authTime = sessionStorage.getItem('wse-auth-time');
+
+      // Check if session is still valid (within 24 hours)
+      if (storedKey && authTime) {
+        const timeDiff = Date.now() - parseInt(authTime);
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+
+        if (timeDiff < twentyFourHours) {
+          apiKey = storedKey;
+          // Optionally auto-login if desired
+          // document.getElementById("pin-section").style.display = "none";
+          // document.getElementById("chat-section").style.display = "flex";
+        } else {
+          // Session expired, clear storage
+          sessionStorage.removeItem('wse-api-key');
+          sessionStorage.removeItem('wse-auth-time');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
